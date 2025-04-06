@@ -5,16 +5,40 @@ import RecipeGrid from "@/components/recipes/RecipeGrid";
 import { recipeData } from "@/data/mockData";
 import { usePantry } from "@/context/PantryContext";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, ChefHat, Refrigerator, Search } from "lucide-react";
+import { AlertCircle, ChefHat, Refrigerator, Search, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const Index: React.FC = () => {
   const { ingredients } = usePantry();
   const [searchTerm, setSearchTerm] = useState("");
+  const [ingredientSearchTerm, setIngredientSearchTerm] = useState("");
+  const [searchByIngredient, setSearchByIngredient] = useState(false);
+  const [open, setOpen] = useState(false);
   
+  // Extract all unique ingredients from recipes
+  const allIngredients = Array.from(
+    new Set(
+      recipeData.flatMap(recipe => 
+        recipe.ingredients.map(ing => ing.toLowerCase())
+      )
+    )
+  ).sort();
+  
+  // Handle search by title/tags
   const handleSearch = (term: string) => {
     setSearchTerm(term);
+    setSearchByIngredient(false);
+  };
+
+  // Handle search by ingredient
+  const handleIngredientSearch = (ingredient: string) => {
+    setIngredientSearchTerm(ingredient);
+    setSearchByIngredient(true);
+    setOpen(false);
   };
 
   return (
@@ -35,7 +59,57 @@ const Index: React.FC = () => {
                 Manage Your Pantry
               </Button>
             </Link>
+            
+            <Popover open={open} onOpenChange={setOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="lg" className="gap-2">
+                  <Search className="h-5 w-5" />
+                  Search by Ingredient
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0" align="start">
+                <Command>
+                  <CommandInput 
+                    placeholder="Type an ingredient..." 
+                    value={ingredientSearchTerm}
+                    onValueChange={setIngredientSearchTerm}
+                  />
+                  <CommandList>
+                    <CommandEmpty>No ingredients found.</CommandEmpty>
+                    <CommandGroup>
+                      {allIngredients
+                        .filter(ing => ing.includes(ingredientSearchTerm.toLowerCase()))
+                        .slice(0, 10)
+                        .map(ingredient => (
+                          <CommandItem 
+                            key={ingredient} 
+                            onSelect={() => handleIngredientSearch(ingredient)}
+                          >
+                            {ingredient}
+                          </CommandItem>
+                        ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
+          {searchByIngredient && ingredientSearchTerm && (
+            <div className="mt-4 inline-flex items-center bg-primary/10 py-1 px-3 rounded-full text-sm">
+              Searching for recipes with: <span className="font-semibold ml-1">{ingredientSearchTerm}</span>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-5 w-5 ml-2" 
+                onClick={() => {
+                  setSearchByIngredient(false);
+                  setIngredientSearchTerm("");
+                }}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
         </section>
 
         <section>
@@ -43,7 +117,7 @@ const Index: React.FC = () => {
             <h2 className="text-2xl font-display font-semibold">Recipe Matches</h2>
           </div>
 
-          {ingredients.length === 0 ? (
+          {ingredients.length === 0 && !searchByIngredient ? (
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
@@ -51,7 +125,11 @@ const Index: React.FC = () => {
               </AlertDescription>
             </Alert>
           ) : (
-            <RecipeGrid recipes={recipeData} searchTerm={searchTerm} />
+            <RecipeGrid 
+              recipes={recipeData} 
+              searchTerm={searchTerm} 
+              ingredientSearchTerm={searchByIngredient ? ingredientSearchTerm : undefined}
+            />
           )}
         </section>
       </div>
