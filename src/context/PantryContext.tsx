@@ -45,8 +45,11 @@ export const PantryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       id: Date.now().toString(),
     };
     
-    // Check if ingredient already exists
-    if (ingredients.some(ing => ing.name.toLowerCase() === ingredient.name.toLowerCase())) {
+    // Make ingredient name lowercase for consistency in matching
+    const normalizedName = ingredient.name.trim().toLowerCase();
+    
+    // Check if ingredient already exists (case insensitive)
+    if (ingredients.some(ing => ing.name.toLowerCase() === normalizedName)) {
       toast({
         title: "Ingredient already exists",
         description: `${ingredient.name} is already in your pantry.`,
@@ -55,7 +58,12 @@ export const PantryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return;
     }
     
-    setIngredients([...ingredients, newIngredient]);
+    // Store the ingredient with original casing but trimmed
+    setIngredients([...ingredients, {
+      ...newIngredient,
+      name: ingredient.name.trim()
+    }]);
+    
     toast({
       title: "Ingredient added",
       description: `${newIngredient.name} has been added to your pantry.`,

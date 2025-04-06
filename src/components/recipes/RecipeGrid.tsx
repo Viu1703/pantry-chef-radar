@@ -10,12 +10,14 @@ interface RecipeGridProps {
   recipes: Recipe[];
   searchTerm?: string;
   ingredientSearchTerm?: string;
+  filterByPantry?: boolean;
 }
 
 const RecipeGrid: React.FC<RecipeGridProps> = ({ 
   recipes, 
   searchTerm = "", 
-  ingredientSearchTerm
+  ingredientSearchTerm = "",
+  filterByPantry = true
 }) => {
   const { ingredients } = usePantry();
   const pantryIngredients = ingredients.map(ing => ing.name.toLowerCase());
@@ -62,9 +64,9 @@ const RecipeGrid: React.FC<RecipeGridProps> = ({
     };
   });
   
-  // Sort recipes by match percentage (highest first)
+  // Sort recipes by match percentage (highest first) if filtering by pantry
   const sortedRecipes = [...recipesWithMatches].sort((a, b) => 
-    b.matchPercentage - a.matchPercentage
+    filterByPantry ? (b.matchPercentage - a.matchPercentage) : 0
   );
 
   if (filteredRecipes.length === 0) {
