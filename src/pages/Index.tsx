@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import RecipeGrid from "@/components/recipes/RecipeGrid";
@@ -87,7 +86,7 @@ const Index: React.FC = () => {
                   Search by Ingredient
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="p-0" align="start" sideOffset={4} width={300}>
+              <PopoverContent className="p-0" align="start" sideOffset={4}>
                 <Command>
                   <CommandInput 
                     placeholder="Type an ingredient..." 
