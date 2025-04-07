@@ -4,7 +4,7 @@ import Layout from "@/components/layout/Layout";
 import IngredientForm from "@/components/pantry/IngredientForm";
 import IngredientList from "@/components/pantry/IngredientList";
 
-const MyPantry: React.FC = () => {
+const MyPantry = () => {
   return (
     <Layout title="My Pantry">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

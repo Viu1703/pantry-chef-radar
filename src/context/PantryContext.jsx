@@ -2,22 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 
-type Ingredient = {
-  id: string;
-  name: string;
-  category: string;
-  amount?: string;
-};
-
-type PantryContextType = {
-  ingredients: Ingredient[];
-  addIngredient: (ingredient: Omit<Ingredient, "id">) => void;
-  removeIngredient: (id: string) => void;
-  updateIngredient: (id: string, ingredient: Partial<Ingredient>) => void;
-  clearPantry: () => void;
-};
-
-const PantryContext = createContext<PantryContextType | undefined>(undefined);
+const PantryContext = createContext(undefined);
 
 export const usePantry = () => {
   const context = useContext(PantryContext);
@@ -27,8 +12,8 @@ export const usePantry = () => {
   return context;
 };
 
-export const PantryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [ingredients, setIngredients] = useState<Ingredient[]>(() => {
+export const PantryProvider = ({ children }) => {
+  const [ingredients, setIngredients] = useState(() => {
     const savedIngredients = localStorage.getItem("pantry");
     return savedIngredients ? JSON.parse(savedIngredients) : [];
   });
@@ -39,7 +24,7 @@ export const PantryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     localStorage.setItem("pantry", JSON.stringify(ingredients));
   }, [ingredients]);
 
-  const addIngredient = (ingredient: Omit<Ingredient, "id">) => {
+  const addIngredient = (ingredient) => {
     const newIngredient = {
       ...ingredient,
       id: Date.now().toString(),
@@ -70,7 +55,7 @@ export const PantryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
   };
 
-  const removeIngredient = (id: string) => {
+  const removeIngredient = (id) => {
     const ingredient = ingredients.find(ing => ing.id === id);
     setIngredients(ingredients.filter((ingredient) => ingredient.id !== id));
     
@@ -82,7 +67,7 @@ export const PantryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
-  const updateIngredient = (id: string, updatedFields: Partial<Ingredient>) => {
+  const updateIngredient = (id, updatedFields) => {
     setIngredients(
       ingredients.map((ingredient) =>
         ingredient.id === id ? { ...ingredient, ...updatedFields } : ingredient
