@@ -7,11 +7,10 @@ import { usePantry } from "@/context/PantryContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Clock, Users, ChevronLeft, Check, X } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
 
-const RecipeDetails: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+const RecipeDetails = () => {
+  const { id } = useParams();
   const navigate = useNavigate();
   const { ingredients } = usePantry();
   
