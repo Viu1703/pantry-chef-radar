@@ -91,9 +91,10 @@ export const PantryProvider = ({ children }) => {
       
       if (error) {
         console.error("Error adding ingredient:", error);
+        console.error("Error details:", error.details, error.hint, error.message);
         toast({
           title: "Error adding ingredient",
-          description: "Could not add the ingredient. Please try again.",
+          description: `Could not add the ingredient: ${error.message}`,
           variant: "destructive",
         });
         return;
@@ -137,9 +138,10 @@ export const PantryProvider = ({ children }) => {
       
       if (error) {
         console.error("Error removing ingredient:", error);
+        console.error("Error details:", error.details, error.hint, error.message);
         toast({
           title: "Error removing ingredient",
-          description: "Could not remove the ingredient. Please try again.",
+          description: `Could not remove the ingredient: ${error.message}`,
           variant: "destructive",
         });
         return;
@@ -178,9 +180,10 @@ export const PantryProvider = ({ children }) => {
       
       if (error) {
         console.error("Error updating ingredient:", error);
+        console.error("Error details:", error.details, error.hint, error.message);
         toast({
           title: "Error updating ingredient",
-          description: "Could not update the ingredient. Please try again.",
+          description: `Could not update the ingredient: ${error.message}`,
           variant: "destructive",
         });
         return;
@@ -220,9 +223,10 @@ export const PantryProvider = ({ children }) => {
       
       if (error) {
         console.error("Error clearing pantry:", error);
+        console.error("Error details:", error.details, error.hint, error.message);
         toast({
           title: "Error clearing pantry",
-          description: "Could not clear your pantry. Please try again.",
+          description: `Could not clear your pantry: ${error.message}`,
           variant: "destructive",
         });
         return;
