@@ -7,27 +7,37 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { usePantry } from "@/context/PantryContext";
 import { categories } from "@/data/mockData";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 
 const IngredientForm: React.FC = () => {
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [amount, setAmount] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { addIngredient } = usePantry();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !category) return;
 
-    addIngredient({
-      name: name.trim(),
-      category,
-      amount: amount.trim(),
-    });
+    setIsSubmitting(true);
+    
+    try {
+      await addIngredient({
+        name: name.trim(),
+        category,
+        amount: amount.trim(),
+      });
 
-    // Reset form
-    setName("");
-    setCategory("");
-    setAmount("");
+      // Reset form
+      setName("");
+      setCategory("");
+      setAmount("");
+    } catch (error) {
+      console.error("Error submitting ingredient:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -45,12 +55,18 @@ const IngredientForm: React.FC = () => {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
+              disabled={isSubmitting}
             />
           </div>
 
           <div>
             <Label htmlFor="ingredient-category">Category</Label>
-            <Select value={category} onValueChange={setCategory} required>
+            <Select 
+              value={category} 
+              onValueChange={setCategory} 
+              required
+              disabled={isSubmitting}
+            >
               <SelectTrigger id="ingredient-category">
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
@@ -73,12 +89,24 @@ const IngredientForm: React.FC = () => {
               placeholder="e.g., 2 cups, 500g"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
+              disabled={isSubmitting}
             />
           </div>
         </CardContent>
         <CardFooter>
-          <Button type="submit" className="w-full">
-            Add to Pantry
+          <Button 
+            type="submit" 
+            className="w-full" 
+            disabled={isSubmitting || !name || !category}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Adding...
+              </>
+            ) : (
+              "Add to Pantry"
+            )}
           </Button>
         </CardFooter>
       </form>

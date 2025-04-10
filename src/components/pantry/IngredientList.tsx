@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePantry } from "@/context/PantryContext";
 import { Button } from "@/components/ui/button";
-import { Trash2, Edit, Search, AlertCircle } from "lucide-react";
+import { Trash2, Edit, Search, AlertCircle, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -17,13 +17,13 @@ import {
 } from "@/components/ui/dialog";
 
 const IngredientList: React.FC = () => {
-  const { ingredients, removeIngredient, clearPantry } = usePantry();
+  const { ingredients, removeIngredient, clearPantry, loading } = usePantry();
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const filteredIngredients = ingredients.filter((ingredient) =>
     ingredient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ingredient.category.toLowerCase().includes(searchTerm.toLowerCase())
+    (ingredient.category && ingredient.category.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const handleClearPantry = () => {
@@ -72,7 +72,12 @@ const IngredientList: React.FC = () => {
           />
         </div>
 
-        {ingredients.length === 0 ? (
+        {loading ? (
+          <div className="flex justify-center items-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <span className="ml-2 text-muted-foreground">Loading your pantry...</span>
+          </div>
+        ) : ingredients.length === 0 ? (
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
@@ -96,7 +101,9 @@ const IngredientList: React.FC = () => {
                 <div>
                   <h3 className="font-medium">{ingredient.name}</h3>
                   <div className="flex gap-2 mt-1 items-center">
-                    <Badge variant="secondary" className="text-xs">{ingredient.category}</Badge>
+                    {ingredient.category && (
+                      <Badge variant="secondary" className="text-xs">{ingredient.category}</Badge>
+                    )}
                     {ingredient.amount && (
                       <span className="text-xs text-muted-foreground">{ingredient.amount}</span>
                     )}
