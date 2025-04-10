@@ -1,17 +1,19 @@
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { 
+  fetchPantryIngredients, 
+  addPantryIngredient, 
+  removePantryIngredient, 
+  updatePantryIngredient, 
+  clearPantryIngredients 
+} from "@/services/pantryService";
 
-const PantryContext = createContext(undefined);
+// Create context
+export const PantryContext = createContext(undefined);
 
-export const usePantry = () => {
-  const context = useContext(PantryContext);
-  if (context === undefined) {
-    throw new Error("usePantry must be used within a PantryProvider");
-  }
-  return context;
-};
+// Export usePantry from the separate hook file
+export { usePantry } from "@/hooks/usePantryContext";
 
 export const PantryProvider = ({ children }) => {
   const [ingredients, setIngredients] = useState([]);
@@ -20,45 +22,26 @@ export const PantryProvider = ({ children }) => {
 
   // Fetch ingredients from Supabase on component mount
   useEffect(() => {
-    const fetchIngredients = async () => {
+    const loadIngredients = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
-          .from("Pantry")
-          .select("*");
-          
-        if (error) {
-          console.error("Error fetching pantry items:", error);
-          console.error("Error details:", error.details, error.hint, error.message);
-          toast({
-            title: "Error loading pantry",
-            description: "Could not load your ingredients. Please try again later.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        console.log("Fetched data from Supabase:", data);
-
-        // Transform Supabase data to match our existing format
-        const formattedData = data.map(item => ({
-          id: item.id.toString(),
-          name: item.ingredient_name || "",
-          category: item.category || "",
-          amount: item.QuantityUnit || "",
-        }));
-
+        const formattedData = await fetchPantryIngredients();
         setIngredients(formattedData);
       } catch (error) {
-        console.error("Error in fetchIngredients:", error);
+        toast({
+          title: "Error loading pantry",
+          description: "Could not load your ingredients. Please try again later.",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
     };
 
-    fetchIngredients();
+    loadIngredients();
   }, [toast]);
 
+  // Add a new ingredient to the pantry
   const addIngredient = async (ingredient) => {
     try {
       // Make ingredient name lowercase for consistency in matching
@@ -74,40 +57,7 @@ export const PantryProvider = ({ children }) => {
         return;
       }
       
-      console.log("Adding ingredient to Supabase:", ingredient);
-      
-      // Insert to Supabase
-      const { data, error } = await supabase
-        .from("Pantry")
-        .insert({
-          ingredient_name: ingredient.name.trim(),
-          category: ingredient.category,
-          QuantityUnit: ingredient.amount,
-          user_id: 1, // Using test user ID
-        })
-        .select();
-      
-      if (error) {
-        console.error("Error adding ingredient:", error);
-        console.error("Error details:", error.details, error.hint, error.message);
-        toast({
-          title: "Error adding ingredient",
-          description: `Could not add the ingredient: ${error.message}`,
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      console.log("Supabase response after insert:", data);
-      
-      // Add to local state with ID from Supabase
-      const newIngredient = {
-        id: data[0].id.toString(),
-        name: data[0].ingredient_name,
-        category: data[0].category,
-        amount: data[0].QuantityUnit,
-      };
-      
+      const newIngredient = await addPantryIngredient(ingredient);
       setIngredients([...ingredients, newIngredient]);
       
       toast({
@@ -115,7 +65,6 @@ export const PantryProvider = ({ children }) => {
         description: `${newIngredient.name} has been added to your pantry.`,
       });
     } catch (error) {
-      console.error("Error in addIngredient:", error);
       toast({
         title: "Error",
         description: "Something went wrong. Please try again.",
@@ -124,26 +73,12 @@ export const PantryProvider = ({ children }) => {
     }
   };
 
+  // Remove an ingredient from the pantry
   const removeIngredient = async (id) => {
     try {
       const ingredient = ingredients.find(ing => ing.id === id);
       
-      // Delete from Supabase
-      const { error } = await supabase
-        .from("Pantry")
-        .delete()
-        .eq("id", parseInt(id));
-      
-      if (error) {
-        console.error("Error removing ingredient:", error);
-        console.error("Error details:", error.details, error.hint, error.message);
-        toast({
-          title: "Error removing ingredient",
-          description: `Could not remove the ingredient: ${error.message}`,
-          variant: "destructive",
-        });
-        return;
-      }
+      await removePantryIngredient(id);
       
       // Update local state
       setIngredients(ingredients.filter((ingredient) => ingredient.id !== id));
@@ -155,7 +90,6 @@ export const PantryProvider = ({ children }) => {
         });
       }
     } catch (error) {
-      console.error("Error in removeIngredient:", error);
       toast({
         title: "Error",
         description: "Something went wrong. Please try again.",
@@ -164,28 +98,10 @@ export const PantryProvider = ({ children }) => {
     }
   };
 
+  // Update an existing ingredient
   const updateIngredient = async (id, updatedFields) => {
     try {
-      // Update in Supabase
-      const { error } = await supabase
-        .from("Pantry")
-        .update({
-          ingredient_name: updatedFields.name,
-          category: updatedFields.category,
-          QuantityUnit: updatedFields.amount,
-        })
-        .eq("id", parseInt(id));
-      
-      if (error) {
-        console.error("Error updating ingredient:", error);
-        console.error("Error details:", error.details, error.hint, error.message);
-        toast({
-          title: "Error updating ingredient",
-          description: `Could not update the ingredient: ${error.message}`,
-          variant: "destructive",
-        });
-        return;
-      }
+      await updatePantryIngredient(id, updatedFields);
       
       // Update local state
       setIngredients(
@@ -199,7 +115,6 @@ export const PantryProvider = ({ children }) => {
         description: "Your pantry has been updated.",
       });
     } catch (error) {
-      console.error("Error in updateIngredient:", error);
       toast({
         title: "Error",
         description: "Something went wrong. Please try again.",
@@ -208,24 +123,10 @@ export const PantryProvider = ({ children }) => {
     }
   };
 
+  // Clear all ingredients from the pantry
   const clearPantry = async () => {
     try {
-      // Delete all pantry items from Supabase for this test user
-      const { error } = await supabase
-        .from("Pantry")
-        .delete()
-        .eq("user_id", 1);
-      
-      if (error) {
-        console.error("Error clearing pantry:", error);
-        console.error("Error details:", error.details, error.hint, error.message);
-        toast({
-          title: "Error clearing pantry",
-          description: `Could not clear your pantry: ${error.message}`,
-          variant: "destructive",
-        });
-        return;
-      }
+      await clearPantryIngredients();
       
       // Clear local state
       setIngredients([]);
@@ -235,7 +136,6 @@ export const PantryProvider = ({ children }) => {
         description: "All ingredients have been removed from your pantry.",
       });
     } catch (error) {
-      console.error("Error in clearPantry:", error);
       toast({
         title: "Error",
         description: "Something went wrong. Please try again.",
