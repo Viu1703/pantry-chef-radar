@@ -23,6 +23,8 @@ const IngredientForm: React.FC = () => {
     setIsSubmitting(true);
     
     try {
+      console.log("Form submission:", { name, category, amount });
+      
       await addIngredient({
         name: name.trim(),
         category,

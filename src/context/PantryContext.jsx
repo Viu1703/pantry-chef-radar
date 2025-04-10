@@ -37,6 +37,8 @@ export const PantryProvider = ({ children }) => {
           return;
         }
 
+        console.log("Fetched data from Supabase:", data);
+
         // Transform Supabase data to match our existing format
         const formattedData = data.map(item => ({
           id: item.id.toString(),
@@ -71,6 +73,11 @@ export const PantryProvider = ({ children }) => {
         return;
       }
       
+      console.log("Adding ingredient to Supabase:", ingredient);
+      
+      // For testing purposes, use a fixed user_id
+      const testUserId = 1; // This is just for development until authentication is implemented
+      
       // Insert to Supabase
       const { data, error } = await supabase
         .from("Pantry")
@@ -78,6 +85,7 @@ export const PantryProvider = ({ children }) => {
           ingredient_name: ingredient.name.trim(),
           category: ingredient.category,
           QuantityUnit: ingredient.amount,
+          user_id: testUserId, // Using test user ID
         })
         .select();
       
@@ -90,6 +98,8 @@ export const PantryProvider = ({ children }) => {
         });
         return;
       }
+      
+      console.log("Supabase response after insert:", data);
       
       // Add to local state with ID from Supabase
       const newIngredient = {
@@ -199,12 +209,14 @@ export const PantryProvider = ({ children }) => {
 
   const clearPantry = async () => {
     try {
-      // Delete all pantry items from Supabase
-      // Note: This should be handled with caution and might require more security
+      // For testing purposes, use a fixed user_id
+      const testUserId = 1; // This is just for development until authentication is implemented
+      
+      // Delete all pantry items from Supabase for this test user
       const { error } = await supabase
         .from("Pantry")
         .delete()
-        .in("id", ingredients.map(ing => parseInt(ing.id)));
+        .eq("user_id", testUserId);
       
       if (error) {
         console.error("Error clearing pantry:", error);
