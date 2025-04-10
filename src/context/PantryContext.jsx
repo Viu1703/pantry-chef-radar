@@ -29,6 +29,7 @@ export const PantryProvider = ({ children }) => {
           
         if (error) {
           console.error("Error fetching pantry items:", error);
+          console.error("Error details:", error.details, error.hint, error.message);
           toast({
             title: "Error loading pantry",
             description: "Could not load your ingredients. Please try again later.",
@@ -75,9 +76,6 @@ export const PantryProvider = ({ children }) => {
       
       console.log("Adding ingredient to Supabase:", ingredient);
       
-      // For testing purposes, use a fixed user_id
-      const testUserId = 1; // This is just for development until authentication is implemented
-      
       // Insert to Supabase
       const { data, error } = await supabase
         .from("Pantry")
@@ -85,7 +83,7 @@ export const PantryProvider = ({ children }) => {
           ingredient_name: ingredient.name.trim(),
           category: ingredient.category,
           QuantityUnit: ingredient.amount,
-          user_id: testUserId, // Using test user ID
+          user_id: 1, // Using test user ID
         })
         .select();
       
@@ -212,14 +210,11 @@ export const PantryProvider = ({ children }) => {
 
   const clearPantry = async () => {
     try {
-      // For testing purposes, use a fixed user_id
-      const testUserId = 1; // This is just for development until authentication is implemented
-      
       // Delete all pantry items from Supabase for this test user
       const { error } = await supabase
         .from("Pantry")
         .delete()
-        .eq("user_id", testUserId);
+        .eq("user_id", 1);
       
       if (error) {
         console.error("Error clearing pantry:", error);
