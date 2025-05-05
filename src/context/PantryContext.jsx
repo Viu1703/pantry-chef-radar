@@ -20,7 +20,7 @@ export const PantryProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // Fetch ingredients from Supabase on component mount
+  // Fetch ingredients from CSV on component mount
   useEffect(() => {
     const loadIngredients = async () => {
       try {
@@ -33,6 +33,7 @@ export const PantryProvider = ({ children }) => {
           description: "Could not load your ingredients. Please try again later.",
           variant: "destructive",
         });
+        console.error("Error loading ingredients:", error);
       } finally {
         setLoading(false);
       }
@@ -70,6 +71,7 @@ export const PantryProvider = ({ children }) => {
         description: "Something went wrong. Please try again.",
         variant: "destructive",
       });
+      console.error("Error adding ingredient:", error);
     }
   };
 
@@ -95,6 +97,7 @@ export const PantryProvider = ({ children }) => {
         description: "Something went wrong. Please try again.",
         variant: "destructive",
       });
+      console.error("Error removing ingredient:", error);
     }
   };
 
@@ -120,6 +123,7 @@ export const PantryProvider = ({ children }) => {
         description: "Something went wrong. Please try again.",
         variant: "destructive",
       });
+      console.error("Error updating ingredient:", error);
     }
   };
 
@@ -141,6 +145,7 @@ export const PantryProvider = ({ children }) => {
         description: "Something went wrong. Please try again.",
         variant: "destructive",
       });
+      console.error("Error clearing pantry:", error);
     }
   };
 

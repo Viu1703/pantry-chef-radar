@@ -1,6 +1,4 @@
 
-import { supabase } from "@/integrations/supabase/client";
-
 // Node class for linked list implementation
 class IngredientNode {
   constructor(data) {
@@ -54,6 +52,45 @@ class IngredientLinkedList {
     }
     return null;
   }
+  
+  // Remove an ingredient by id
+  remove(id) {
+    if (!this.head) return null;
+    
+    if (this.head.data.id.toString() === id.toString()) {
+      const removedData = this.head.data;
+      this.head = this.head.next;
+      this.size--;
+      return removedData;
+    }
+    
+    let current = this.head;
+    while (current.next && current.next.data.id.toString() !== id.toString()) {
+      current = current.next;
+    }
+    
+    if (current.next) {
+      const removedData = current.next.data;
+      current.next = current.next.next;
+      this.size--;
+      return removedData;
+    }
+    
+    return null;
+  }
+  
+  // Update an ingredient by id
+  update(id, updatedFields) {
+    let current = this.head;
+    while (current) {
+      if (current.data.id.toString() === id.toString()) {
+        current.data = { ...current.data, ...updatedFields };
+        return current.data;
+      }
+      current = current.next;
+    }
+    return null;
+  }
 }
 
 // Tree node implementation for category organization
@@ -101,7 +138,37 @@ class IngredientGraph {
     const relations = this.adjacencyList.get(ingredient.id) || [];
     return relations.map(relatedId => 
       allIngredients.find(ing => ing.id.toString() === relatedId.toString())
-    );
+    ).filter(Boolean);
+  }
+  
+  // Remove a vertex and all its edges
+  removeVertex(id) {
+    if (!this.adjacencyList.has(id)) return;
+    
+    // Remove all edges connected to this vertex
+    while (this.adjacencyList.get(id).length) {
+      const adjacentVertex = this.adjacencyList.get(id).pop();
+      this.removeEdge(id, adjacentVertex);
+    }
+    
+    // Remove the vertex itself
+    this.adjacencyList.delete(id);
+  }
+  
+  // Remove an edge between two vertices
+  removeEdge(id1, id2) {
+    if (this.adjacencyList.has(id1)) {
+      this.adjacencyList.set(
+        id1, 
+        this.adjacencyList.get(id1).filter(id => id !== id2)
+      );
+    }
+    if (this.adjacencyList.has(id2)) {
+      this.adjacencyList.set(
+        id2, 
+        this.adjacencyList.get(id2).filter(id => id !== id1)
+      );
+    }
   }
 }
 
@@ -134,6 +201,14 @@ class IngredientStack {
   
   toArray() {
     return [...this.items];
+  }
+  
+  remove(id) {
+    const index = this.items.findIndex(item => item.id.toString() === id.toString());
+    if (index !== -1) {
+      return this.items.splice(index, 1)[0];
+    }
+    return null;
   }
 }
 
@@ -168,6 +243,14 @@ class IngredientQueue {
   toArray() {
     return [...this.items];
   }
+  
+  remove(id) {
+    const index = this.items.findIndex(item => item.id.toString() === id.toString());
+    if (index !== -1) {
+      return this.items.splice(index, 1)[0];
+    }
+    return null;
+  }
 }
 
 // In-memory cache using our data structures
@@ -179,6 +262,9 @@ const pantryCache = {
   ingredientGraph: new IngredientGraph(),
   initialized: false
 };
+
+// CSV file path (would be stored in the public directory in a real app)
+const CSV_FILE_NAME = 'pantry_data.csv';
 
 // Helper to build category tree
 const buildCategoryTree = (ingredients) => {
@@ -216,13 +302,79 @@ const buildCategoryTree = (ingredients) => {
   }
 };
 
-// Transform database data to match our format
-const transformDatabaseIngredient = (item) => ({
-  id: item.id.toString(),
-  name: item.ingredient_name || "",
-  category: item.category || "",
-  amount: item.QuantityUnit || "",
+// CSV Utility Functions
+// Transform CSV row to ingredient object
+const transformCSVtoIngredient = (row) => ({
+  id: row.id || String(Date.now()),
+  name: row.ingredient_name || "",
+  category: row.category || "",
+  amount: row.QuantityUnit || "",
 });
+
+// Parse CSV string to array of objects
+const parseCSV = (csvString) => {
+  if (!csvString.trim()) {
+    return [];
+  }
+  
+  const rows = csvString.split('\n');
+  const headers = rows[0].split(',').map(h => h.trim());
+  
+  return rows.slice(1).filter(row => row.trim()).map(row => {
+    const values = row.split(',').map(v => v.trim());
+    const obj = {};
+    headers.forEach((header, index) => {
+      obj[header] = values[index];
+    });
+    return obj;
+  });
+};
+
+// Convert array of ingredients to CSV string
+const ingredientsToCSV = (ingredients) => {
+  if (ingredients.length === 0) {
+    return 'id,ingredient_name,category,QuantityUnit,user_id';
+  }
+  
+  const headers = ['id', 'ingredient_name', 'category', 'QuantityUnit', 'user_id'];
+  const rows = ingredients.map(ing => [
+    ing.id,
+    ing.name,
+    ing.category,
+    ing.amount,
+    '1' // default user_id for local storage
+  ]);
+  
+  return [
+    headers.join(','),
+    ...rows.map(row => row.join(','))
+  ].join('\n');
+};
+
+// Read CSV data from localStorage
+const readFromLocalStorage = () => {
+  try {
+    const data = localStorage.getItem(CSV_FILE_NAME);
+    if (!data) {
+      return 'id,ingredient_name,category,QuantityUnit,user_id';
+    }
+    return data;
+  } catch (error) {
+    console.error("Error reading from localStorage:", error);
+    return 'id,ingredient_name,category,QuantityUnit,user_id';
+  }
+};
+
+// Write CSV data to localStorage
+const writeToLocalStorage = (csvString) => {
+  try {
+    localStorage.setItem(CSV_FILE_NAME, csvString);
+    return true;
+  } catch (error) {
+    console.error("Error writing to localStorage:", error);
+    return false;
+  }
+};
 
 // Initialize cache with data
 const initializeCache = (ingredients) => {
@@ -242,131 +394,183 @@ const initializeCache = (ingredients) => {
   pantryCache.initialized = true;
 };
 
-// Fetch all pantry ingredients for the current user
+// Fetch all pantry ingredients from the local storage
 export const fetchPantryIngredients = async () => {
-  const { data, error } = await supabase
-    .from("Pantry")
-    .select("*");
+  try {
+    const csvData = readFromLocalStorage();
+    const parsedData = parseCSV(csvData);
     
-  if (error) {
+    console.log("Fetched data from local storage:", parsedData);
+    
+    // Transform data to match our format
+    const transformedData = parsedData.map(transformCSVtoIngredient);
+    
+    // Initialize our data structures
+    initializeCache(transformedData);
+    
+    return transformedData;
+  } catch (error) {
     console.error("Error fetching pantry items:", error);
-    console.error("Error details:", error.details, error.hint, error.message);
     throw error;
   }
+};
 
-  console.log("Fetched data from Supabase:", data);
-  
-  // Transform Supabase data to match our existing format
-  const transformedData = data.map(transformDatabaseIngredient);
-  
-  // Initialize our data structures
-  initializeCache(transformedData);
-  
-  return transformedData;
+// Generate a unique ID for new ingredients
+const generateUniqueId = () => {
+  return String(Date.now());
 };
 
 // Add a new ingredient to the pantry
 export const addPantryIngredient = async (ingredient) => {
-  console.log("Adding ingredient to Supabase:", ingredient);
-  
-  const { data, error } = await supabase
-    .from("Pantry")
-    .insert({
-      ingredient_name: ingredient.name.trim(),
+  try {
+    // Read current data
+    const csvData = readFromLocalStorage();
+    const parsedData = parseCSV(csvData);
+    
+    // Create the transformed ingredient with a new ID
+    const newId = generateUniqueId();
+    const transformedIngredient = {
+      id: newId,
+      name: ingredient.name.trim(),
       category: ingredient.category,
-      QuantityUnit: ingredient.amount,
-      user_id: 1, // Using test user ID
-    })
-    .select();
-  
-  if (error) {
+      amount: ingredient.amount,
+    };
+    
+    // Add to parsed data
+    parsedData.push({
+      id: transformedIngredient.id,
+      ingredient_name: transformedIngredient.name,
+      category: transformedIngredient.category,
+      QuantityUnit: transformedIngredient.amount,
+      user_id: '1'
+    });
+    
+    // Convert back to CSV and save
+    const newCSVData = ingredientsToCSV(parsedData.map(transformCSVtoIngredient));
+    writeToLocalStorage(newCSVData);
+    
+    console.log("Added new ingredient:", transformedIngredient);
+    
+    // Update our data structures
+    if (pantryCache.initialized) {
+      pantryCache.ingredientList.add(transformedIngredient);
+      pantryCache.ingredientStack.push(transformedIngredient);
+      pantryCache.ingredientQueue.enqueue(transformedIngredient);
+      pantryCache.ingredientGraph.addVertex(transformedIngredient);
+      
+      // Update category tree
+      if (transformedIngredient.category) {
+        if (!pantryCache.categoryTree.has(transformedIngredient.category)) {
+          pantryCache.categoryTree.set(transformedIngredient.category, new CategoryTreeNode(transformedIngredient.category));
+        }
+        pantryCache.categoryTree.get(transformedIngredient.category).addIngredient(transformedIngredient);
+      }
+    }
+    
+    return transformedIngredient;
+  } catch (error) {
     console.error("Error adding ingredient:", error);
-    console.error("Error details:", error.details, error.hint, error.message);
     throw error;
   }
-  
-  console.log("Supabase response after insert:", data);
-  
-  // Create the transformed ingredient
-  const transformedIngredient = transformDatabaseIngredient(data[0]);
-  
-  // Update our data structures
-  if (pantryCache.initialized) {
-    pantryCache.ingredientList.add(transformedIngredient);
-    pantryCache.ingredientStack.push(transformedIngredient);
-    pantryCache.ingredientQueue.enqueue(transformedIngredient);
-    pantryCache.ingredientGraph.addVertex(transformedIngredient);
-    
-    // Update category tree
-    if (transformedIngredient.category) {
-      if (!pantryCache.categoryTree.has(transformedIngredient.category)) {
-        pantryCache.categoryTree.set(transformedIngredient.category, new CategoryTreeNode(transformedIngredient.category));
-      }
-      pantryCache.categoryTree.get(transformedIngredient.category).addIngredient(transformedIngredient);
-    }
-  }
-  
-  return transformedIngredient;
 };
 
 // Remove an ingredient from the pantry
 export const removePantryIngredient = async (id) => {
-  const { error } = await supabase
-    .from("Pantry")
-    .delete()
-    .eq("id", parseInt(id));
-  
-  if (error) {
+  try {
+    // Read current data
+    const csvData = readFromLocalStorage();
+    const parsedData = parseCSV(csvData);
+    
+    // Filter out the ingredient to remove
+    const updatedData = parsedData.filter(item => item.id !== id);
+    
+    // Convert back to CSV and save
+    const newCSVData = ingredientsToCSV(updatedData.map(transformCSVtoIngredient));
+    writeToLocalStorage(newCSVData);
+    
+    // Update data structures
+    if (pantryCache.initialized) {
+      // Remove from linked list
+      pantryCache.ingredientList.remove(id);
+      
+      // Remove from stack
+      pantryCache.ingredientStack.remove(id);
+      
+      // Remove from queue
+      pantryCache.ingredientQueue.remove(id);
+      
+      // Remove from graph
+      pantryCache.ingredientGraph.removeVertex(id);
+      
+      // Need to rebuild the category tree after removing an ingredient
+      buildCategoryTree(pantryCache.ingredientList.toArray());
+    }
+    
+    return true;
+  } catch (error) {
     console.error("Error removing ingredient:", error);
-    console.error("Error details:", error.details, error.hint, error.message);
     throw error;
   }
-  
-  // Rebuild cache after deletion
-  // For demonstration purposes we'd rebuild all structures after fetching updated data
-  // In a real app, we could optimize by removing specific items from each structure
 };
 
 // Update an existing ingredient
 export const updatePantryIngredient = async (id, updatedFields) => {
-  const { error } = await supabase
-    .from("Pantry")
-    .update({
-      ingredient_name: updatedFields.name,
-      category: updatedFields.category,
-      QuantityUnit: updatedFields.amount,
-    })
-    .eq("id", parseInt(id));
-  
-  if (error) {
+  try {
+    // Read current data
+    const csvData = readFromLocalStorage();
+    const parsedData = parseCSV(csvData);
+    
+    // Find and update the ingredient
+    const updatedData = parsedData.map(item => {
+      if (item.id === id) {
+        return {
+          ...item,
+          ingredient_name: updatedFields.name || item.ingredient_name,
+          category: updatedFields.category || item.category,
+          QuantityUnit: updatedFields.amount || item.QuantityUnit
+        };
+      }
+      return item;
+    });
+    
+    // Convert back to CSV and save
+    const newCSVData = ingredientsToCSV(updatedData.map(transformCSVtoIngredient));
+    writeToLocalStorage(newCSVData);
+    
+    // Update our data structures
+    if (pantryCache.initialized) {
+      const updatedIngredient = pantryCache.ingredientList.update(id, updatedFields);
+      
+      // Rebuild cache to ensure consistency
+      initializeCache(pantryCache.ingredientList.toArray());
+    }
+    
+    return true;
+  } catch (error) {
     console.error("Error updating ingredient:", error);
-    console.error("Error details:", error.details, error.hint, error.message);
     throw error;
   }
-  
-  // Similar to remove, we'd need to rebuild or update our structures
-  // For this demo, we'll assume we refetch data to maintain structure consistency
 };
 
 // Clear all ingredients from the pantry
 export const clearPantryIngredients = async () => {
-  const { error } = await supabase
-    .from("Pantry")
-    .delete()
-    .eq("user_id", 1);
-  
-  if (error) {
+  try {
+    // Create empty CSV with just headers
+    const emptyCSV = 'id,ingredient_name,category,QuantityUnit,user_id';
+    writeToLocalStorage(emptyCSV);
+    
+    // Clear all data structures
+    pantryCache.ingredientList = new IngredientLinkedList();
+    pantryCache.ingredientStack = new IngredientStack();
+    pantryCache.ingredientQueue = new IngredientQueue();
+    pantryCache.ingredientGraph = new IngredientGraph();
+    pantryCache.categoryTree.clear();
+    
+    return true;
+  } catch (error) {
     console.error("Error clearing pantry:", error);
-    console.error("Error details:", error.details, error.hint, error.message);
     throw error;
   }
-  
-  // Clear all data structures
-  pantryCache.ingredientList = new IngredientLinkedList();
-  pantryCache.ingredientStack = new IngredientStack();
-  pantryCache.ingredientQueue = new IngredientQueue();
-  pantryCache.ingredientGraph = new IngredientGraph();
-  pantryCache.categoryTree.clear();
 };
 
 // Helper functions that expose our data structures (could be used by other components)
